@@ -1,4 +1,20 @@
-# Project Sistine
+## This is a Python3 version of Project Sistine
+### Working on Macbook Air M1 (testing required for other mac devices)
+</hr>
+
+### Installation
+1. cd into quartz, install the requirements using pip -r requirements.txt
+2. run python setup.py (inside the quartz dir)
+3. cd into master, nstall the requirements using pip -r requirements.txt
+4. run python sistine.py
+
+
+
+</hr>
+
+# Project Sistine Original Readme.md
+
+## <a href="https://github.com/bijection/sistine"> Project Sistine Repo Link </a>
 
 ![Sistine * 3/2](splash.png)
 
