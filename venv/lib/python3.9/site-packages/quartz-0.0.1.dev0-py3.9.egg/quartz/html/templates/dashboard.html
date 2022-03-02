@@ -1,0 +1,78 @@
+{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h3>Dashboard</h3>
+
+<!--Item counts-->
+<div class="row">
+    <!--Projects-->
+    <div class="col-md-2">
+        <div class="boxed-content">
+            <h5 class="boxed-content-title">
+                Projects
+            </h5>
+
+            <p>{{project_count}}</p>
+
+        </div>
+    </div>
+
+    <!--Event types-->
+    <div class="col-md-2">
+        <div class="boxed-content">
+            <h5 class="boxed-content-title">
+                Event types
+            </h5>
+
+            <p>{{event_category_count}}</p>
+
+        </div>
+    </div>
+
+    <!--Events-->
+    <div class="col-md-2">
+        <div class="boxed-content">
+            <h5 class="boxed-content-title">
+                Events
+            </h5>
+
+            <p>{{event_count}}</p>
+
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2.5%">
+    <div class="card-body">
+        <div class="row">
+            <h4>Most active projects</h4>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Project name</th>
+                    <th>Events (last hour)</th>
+                    <th>Events (last 24h)</th>
+                    <th>Events (last week)</th>
+                    <th>Total event count</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for project in projects %}
+                <tr>
+                    <th>{{ project.name }}</th>
+                    <td>{{ project.event_count(hours=1) }}</td>
+                    <td>{{ project.event_count(hours=24) }}</td>
+                    <td>{{ project.event_count(hours=168) }}</td>
+                    <td>{{ project.event_count() }}</td>
+                </tr>
+                {% end %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% end %}
+

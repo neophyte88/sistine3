@@ -1,0 +1,3 @@
+[console_scripts]
+quartz = quartz.cli:cli
+

@@ -1,0 +1,179 @@
+{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h5>Events</h5>
+
+<div class="row">
+    <div class="col s12">
+        <ul class="collapsible" data-collapsible="accordion">
+            <li>
+                <div class="collapsible-header blue-grey lighten-5">Last 10 queries</div>
+                <div class="collapsible-body">
+                    <ul class="collection">
+                        {% for query in history %}
+                        <li class="collection-item">
+                            <code>{{ query.query }}</code>
+                            <span class="badge" title="{{ query.result_count }} results">
+                                {{ query.result_count }}
+                            </span>
+                            <span class="badge" title="{{ query.runtime }} seconds duration">
+                                <i class="material-icons">access_time</i>
+                            </span>
+                        <span class="badge" title="{{ query.humanized_timestamp }}"><i
+                                class="material-icons">textsms</i></span>
+                        </li>
+                        {% end %}
+                    </ul>
+                </div>
+            </li>
+            <li>
+                <div class="collapsible-header blue-grey lighten-5">Saved queries</div>
+                <div class="collapsible-body">
+                    <ul class="collection" id="saved-queries-ul"></ul>
+                </div>
+            </li>
+        </ul>
+
+        <div class="input-field">
+            <label for="query" class="control-label">Query</label>
+
+            <input type="text" class="form-control" id="query" style="font-family: consolas;"
+                    {% if initial_query %}
+                   value="{{ initial_query }}"
+                    {% end %}
+            >
+
+            <button class="btn green" id="run-query">Run query</button>
+            <button class="btn" id="save-query">Save query for later visualisation</button>
+        </div>
+
+        <div class="row">
+            <div class="col s12">
+                <div class="card">
+                    <div class="card-content">
+                        <div id="table-area"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+<script>
+    var getEventFields = function (data) {
+        if (!data.length) {
+            return []
+        }
+        var values = data[0].values;
+        var keys = [];
+        for (name in values) {
+            if (!values.hasOwnProperty(name)) {
+                continue;
+            }
+            keys.push(name)
+        }
+        return keys
+    };
+
+    var getColumnDefinitions = function (fieldNames) {
+        var columns = [];
+        console.log(fieldNames);
+        for (var i = 0; i < fieldNames.length; i++) {
+            columns.push({data: "values." + fieldNames[i], title: fieldNames[i]});
+            console.log(fieldNames[i]);
+        }
+        columns.push({data: "source", title: "Source"});
+        columns.push({data: "timestamp", title: "Timestamp"});
+        return columns
+    };
+    var makeQuery = function (query) {
+        $("#run-query").attr("disabled", true);
+        pymicroserviceMethodCall({
+            method: 'query_events',
+            params: {
+                query: query
+            },
+            onSuccess: function (data) {
+                $("#run-query").attr("disabled", false);
+                if (data.error) {
+                    $("#query-error").show();
+                    $("#query-error-msg").text(JSON.stringify(data.error));
+                }
+                else {
+                    $("#table-area").append($("<table id='data-table' class='table'></table>"));
+
+                    var eventFields = getEventFields(data.result);
+
+                    var columns = getColumnDefinitions(eventFields);
+
+                    var table = $("#data-table").DataTable({
+                        dom: 'Bfrtip',
+                        data: data.result,
+                        columns: columns,
+                        buttons: [
+                            'copy', 'csv', 'excel', 'pdf'
+                        ]
+                    });
+                }
+            }
+        })
+
+    };
+
+    $("#run-query").on('click', function (event) {
+        event.preventDefault();
+
+        $("#table-area").empty();
+        $("#query-error").hide();
+
+        makeQuery($("#query").val());
+    });
+
+    function refreshSavedQueries() {
+        var queriesUl = $("#saved-queries-ul");
+        queriesUl.empty();
+        var queries = JSON.parse(window.localStorage.getItem("saved_queries"));
+        for (var i in queries) {
+            queriesUl.append("<li class='collection-item'><code>" + queries[i] +
+                    "</code> <span class='badge'><i class='material-icons' onclick='removeSavedQuery("
+                    + i + ");'>close</i></span></li>")
+        }
+    }
+
+    function removeSavedQuery(index) {
+        var items = JSON.parse(window.localStorage.getItem("saved_queries"));
+        items.splice(index, 1);
+        localStorage.setItem("saved_queries", JSON.stringify(items));
+        refreshSavedQueries();
+    }
+
+    $("#save-query").on('click', function (e) {
+        e.preventDefault();
+        var currentQuery = $("#query").val();
+
+        var currentItems = window.localStorage.getItem("saved_queries");
+        if (currentItems == undefined || currentItems == null) {
+            currentItems = [];
+        }
+        else {
+            currentItems = JSON.parse(currentItems);
+        }
+        currentItems.push(currentQuery);
+        window.localStorage.setItem("saved_queries", JSON.stringify(currentItems));
+        refreshSavedQueries();
+
+        Materialize.toast("Query saved!", 4000, "green")
+    });
+
+    refreshSavedQueries();
+
+    {% if initial_query %}
+    $("#run-query").click();
+    {% end %}
+</script>
+
+{% end %}
+

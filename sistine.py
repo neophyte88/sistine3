@@ -430,7 +430,9 @@ def main():
             initialStageTicks = cv2.getTickCount()
         
         cv2.imshow('drawframe', drawframe)
-        cv2.moveWindow('drawframe', WINDOW_SHIFT_X, WINDOW_SHIFT_Y)
+        print(WINDOW_SHIFT_X)
+        print(type(WINDOW_SHIFT_X))
+        cv2.moveWindow('drawframe', int(WINDOW_SHIFT_X), int(WINDOW_SHIFT_Y))
 
     # release everything
     cap.release()

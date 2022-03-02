@@ -1,0 +1,53 @@
+{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h3>Status</h3>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">"project" collection</span>
+                <div>
+                    <p>Data size: {{ project_size }}</p>
+                    <p>Index size: {{ project_index_size }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">"event_category" collection</span>
+                <div>
+                    <p>Data size: {{ category_size }}</p>
+                    <p>Index size: {{ category_index_size }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">"event" collection</span>
+                <div>
+                    <p>Data size: {{ event_size }}</p>
+                    <p>Index size: {{ event_index_size }}</p>
+                    <p>Item count: {{ event_count }}</p>
+                    <p>Average item size: {{ event_avg_size }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% end %}
+

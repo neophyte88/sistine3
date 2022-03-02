@@ -1,0 +1,117 @@
+projects.html{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h5>Building plots using pyplot</h5>
+
+<div class="row">
+    <div class="col s12">
+        <ul class="collapsible poput" data-collapsible="accordion">
+            <li>
+                <div class="collapsible-header">Hints</div>
+                <div class="collapsible-body"><p>Check the documentation</p></div>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+
+                <form>
+
+                    <div class="input-field">
+                        <input type="text" name="query" id="query">
+                        <label for="query">Query</label>
+                    </div>
+
+                    <div class="input-field">
+                        <input type="text" name="by_field" id="by_field">
+                        <label for="by_field">By field</label>
+                    </div>
+
+                    <div class="input-field">
+                        <input type="text" name="title" id="title">
+                        <label for="title">Title</label>
+                    </div>
+
+                    <div class="input-field">
+                        <select name="type" id="type">
+                            <option value="line">Line plot</option>
+                            <option value="timeseries">Timeseries plot</option>
+                            <option value="pie">Pie chart</option>
+                        </select>
+                        <label>Plot type</label>
+                    </div>
+
+                    <button id="submit" class="btn">Generate</button>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="result-content"></div>
+
+
+<script>
+    $(document).ready(function () {
+        $('select').material_select();
+    });
+
+    $("#submit").on('click', function (e) {
+        e.preventDefault();
+
+        var query = $("#query").val();
+        var byField = $("#by_field").val();
+        var title = $("#title").val();
+        var type = $("#type").val();
+
+        pymicroserviceMethodCall({
+            "method": "build_pyplot_chart",
+            "params": {
+                "query": query,
+                "title": title,
+                "by_field": byField,
+                "chart_type": type
+            },
+            "onSuccess": function (data) {
+                console.log(data);
+                if (data.error != null) {
+                    handleFailure(data.error);
+                }
+                else {
+                    handleSuccess(data.result);
+                }
+            }
+        })
+    });
+
+    function handleSuccess(data) {
+        var resultContainer = $("#result-content");
+        resultContainer.empty();
+
+        resultContainer.append($("<a download='plot.png' href='data:image;base64," + data.plot_image + "'>" +
+                "<button class='btn'>Download</button></a>"));
+        resultContainer.append($("<img src='data:image;base64," + data.plot_image + "'/>"));
+
+
+        var message = "Events: " + data.event_count + "; " +
+                "Query duration: " + data.query_duration + "; " +
+                "Plot generation duration: " + data.chart_generation_duration;
+
+        Materialize.toast(message, 4000, "green");
+    }
+
+    function handleFailure(error) {
+        Materialize.toast(JSON.stringify(error), 4000, "red");
+    }
+</script>
+
+{% end %}
+

@@ -1,0 +1,368 @@
+projects.html{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h5>Make plots</h5>
+
+<p>Check the documentation of plots to see what parameters are important</p>
+
+<h5>Plot options</h5>
+
+
+<div class="row">
+    <div class="col s6">
+
+        <p onclick="displayInfoPanel('line');">
+            <input type="radio" name="plot-type" checked value="line" id="plot-type-line">
+            <label for="plot-type-line">
+                Line graph (values are required to be numbers)
+            </label>
+        </p>
+
+        <p onclick="displayInfoPanel('ts_line');">
+            <input type="radio" name="plot-type" value="ts_line" id="plot-type-ts_line">
+            <label for="plot-type-ts_line">
+                Timeseries line graph (values are required to be numbers)
+            </label>
+        </p>
+
+        <p onclick="displayInfoPanel('pie');">
+            <input type="radio" name="plot-type" value="pie" id="plot-type-pie">
+            <label for="plot-type-pie">
+                Pie chart (no value restrictions)
+            </label>
+        </p>
+
+    </div>
+    <div class="col s6">
+        <div class="card">
+            <div class="card-content">
+
+                <div id="info_line" class="info-panel">
+                    The <b>line</b> plot displays the desired value fluctuation in a equally distributed manner.
+                </div>
+
+                <div id="info_ts_line" class="info-panel">
+                    The <b>timeseries line</b> plot displays the desired value fluctuation where the distance on
+                    <code>x</code>
+                    axis is directly proportional to the time distance between the two events occured.
+                </div>
+
+                <div id="info_pie" class="info-panel">
+                    The <b>pie</b> chart offers a graphical interpretation of the percent of values with equal values
+                    for
+                    the
+                    given field, relative to the total queried events.
+
+                    <div class="card-panel red darken-2 white-text">
+                        <i class="material-icons">warning</i>
+                        This plot type only generates plot for the first query.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $("div.info-panel").hide();
+    $("div#info_line").show();
+
+    function displayInfoPanel(item) {
+        $("div.info-panel").hide();
+        $("div#info_" + item).show();
+    }
+</script>
+
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">Saved queries</span>
+                <ul id="saved-queries" class="collection">
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <h4>Current queries</h4>
+    <ul id="current-queries" class="collection">
+    </ul>
+</div>
+
+
+<div class="row">
+    <button class="btn btn-primary" onclick="triggerVisualizeData();" id="submit-btn">Visualize data</button>
+</div>
+
+<div class="row" id="error-box">
+    <div class="alert alert-danger">
+        <span id="error-msg"></span>
+    </div>
+</div>
+
+<div class="row" id="chart-box">
+    <div id="chart"></div>
+</div>
+
+
+<script>
+    function toggleSavedQueries() {
+        var queriesStr = window.localStorage.getItem("saved_queries");
+        var queries = [];
+        if (queriesStr == null || queriesStr == undefined) {
+            queries = []
+        }
+        else {
+            queries = JSON.parse(queriesStr);
+        }
+        for (var i in queries) {
+            $("#saved-queries").append($("<li class='collection-item' data-query-id=" + i + ">" +
+                    "<code class='query blue-text text-darken-2'>"
+                    + queries[i] + "</code> by field <input type='text' class='field'>" +
+                    "<a onclick='addQuery(" + i + ")'><span class='btn'>Add</span></a></li>"))
+        }
+    }
+    toggleSavedQueries();
+    var globalCurrentQueries = 0;
+    $("#error-box").hide();
+
+    function showError(m) {
+        Materialize.toast(m, 4000, "red");
+    }
+
+    function addQuery(index) {
+        var query = $("li[data-query-id='" + index + "'] .query").text();
+        var fieldElement = $("li[data-query-id='" + index + "'] .field");
+
+        var field = fieldElement.val();
+        if (field == "") {
+            showError("Field name must not be empty");
+            return;
+        }
+        $("#current-queries").append($('<li class="collection-item" data-query="' + encodeURIComponent(query) +
+                '" data-field="' + field + '" data-id="' + globalCurrentQueries + '"><code>' + query +
+                '</code> by field <code>' + field + '</code> <a class="secondary-content" onclick="removeCurrentQuery('
+                + globalCurrentQueries + ')" title="Remove">X</a></li>'));
+        globalCurrentQueries++;
+        fieldElement.val("");
+    }
+
+    function removeCurrentQuery(i) {
+        $("#current-queries li[data-id='" + i + "']").detach();
+    }
+
+    var currentQueryId = 2;
+
+    var timestampRegex = /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/;
+
+    var timestampStringToDate = function (timestamp) {
+        var items = timestampRegex.exec(timestamp);
+        return new Date(items[1], items[2], items[3], items[4], items[5], items[6]);
+    };
+
+
+    function showLoading() {
+        $("#submit-btn").attr("disabled", true);
+    }
+
+    function hideLoading() {
+        $("#submit-btn").attr("disabled", false);
+    }
+
+    function gatherQueries() {
+        var queryElements = $("li[data-query]");
+        var toReturn = [];
+        for (var i = 0; i <= queryElements.length; i++) {
+            if (queryElements[i] === undefined || queryElements[i] == null) {
+                continue;
+            }
+            var query = decodeURIComponent($(queryElements[i]).data("query"));
+            var field = $(queryElements[i]).data("field");
+            toReturn.push({query: query, field: field});
+        }
+        return toReturn;
+    }
+
+    function buildPlot(data) {
+        hideLoading();
+        var errors = [];
+        var oks = [];
+
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].error == null) {
+                oks.push(data[i]);
+            }
+            else {
+                errors.push(data[i]);
+            }
+        }
+
+        if (errors.length != 0) {
+            $("#error-msg").text(JSON.stringify(errors));
+            $("#error-box").show();
+            return;
+        }
+
+        buildPlotWithData(oks, $("input[name='plot-type']:checked").val());
+    }
+
+    function extractOnlyData(data) {
+        var toReturn = [];
+        for (var i = 0; i < data.length; i++) {
+            toReturn.push(["query_" + (i + 1)]);
+            for (var j = 0; j < data[i].result.length; j++) {
+                toReturn[i].push(data[i].result[j].value);
+            }
+        }
+        return toReturn;
+    }
+
+    function extractValueOccurences(data) {
+        var toReturnDict = {};
+        // currently only do this for the first query
+        var relevantData = data[0];
+        // build an object with each item frequency
+        for (var i = 0; i < relevantData.result.length; i++) {
+            var currentItem = relevantData.result[i].value;
+            if (!(currentItem in toReturnDict)) {
+                toReturnDict[currentItem] = 1
+            }
+            else {
+                toReturnDict[currentItem]++;
+            }
+        }
+        console.log(toReturnDict);
+        // convert the item to a list of lists
+        var toReturn = [];
+        for (var key in toReturnDict) {
+            if (toReturnDict.hasOwnProperty(key)) {
+                toReturn.push([key, toReturnDict[key]])
+            }
+        }
+        return toReturn;
+    }
+
+    function extractDataWithTimestamp(data) {
+        var toReturn = [];
+        var ts = ["x"];
+        for (var i = 0; i < data.length; i++) {
+            toReturn.push(["query_" + (i + 1)]);
+            for (var j = 0; j < data[i].result.length; j++) {
+                toReturn[i].push(data[i].result[j].value);
+                var currentTs = data[i].result[j].timestamp;
+                ts.push(timestampStringToDate(currentTs));
+            }
+        }
+        toReturn.push(ts);
+        return toReturn;
+    }
+
+    function buildPlotWithData(data, plotType) {
+        // cleanup previous charts
+        var chartBox = $("#chart-box");
+        chartBox.empty();
+        chartBox.append($("<div id='chart'></div>"));
+        var chartFields, chart;
+        console.log(plotType);
+        // build chart
+        switch (plotType) {
+            case "line":
+                chartFields = extractOnlyData(data);
+                chart = c3.generate({
+                    bindTo: "#chart",
+                    data: {
+                        columns: chartFields
+                    }
+                });
+                break;
+            case "ts_line":
+                chartFields = extractDataWithTimestamp(data);
+                chart = c3.generate({
+                    bindTo: "#chart",
+                    data: {
+                        x: 'x',
+                        columns: chartFields
+                    },
+                    axis: {
+                        x: {
+                            type: 'timeseries',
+                            tick: {
+                                xFormat: '%Y-%m-%d %H:%M:%S',
+                                format: '%Y-%m-%d %H:%M:%S'
+                            }
+                        }
+                    }
+                });
+                break;
+            case "pie":
+                chartFields = extractValueOccurences(data);
+                console.log(chartFields);
+                chart = c3.generate({
+                    bindTo: "#chart",
+                    data: {
+                        columns: chartFields,
+                        type: "pie"
+                    },
+                    pie: {
+                        label: {
+                            format: function (value, ratio, id) {
+                                return parseFloat(ratio * 100).toFixed(1) + "% (" + value + ")";
+                            }
+                        }
+                    }
+                });
+                break;
+            default:
+                console.log("default");
+        }
+    }
+
+
+    var triggerVisualizeData = function () {
+
+        showLoading();
+
+        var queries = gatherQueries();
+        var opts = {
+            calls: [],
+            onSuccess: buildPlot
+        };
+        for (var i = 0; i < queries.length; i++) {
+            opts.calls.push({
+                "method": "query_events_for_field",
+                "params": queries[i]
+            });
+        }
+
+        pymicroserviceBatchCall(opts);
+
+    };
+
+    timestampStringToDate("2016-12-20 17:33:19");
+    timestampStringToDate("2016-12-20 17:33:22");
+
+
+    var chart = c3.generate({
+        bindTo: "#chart",
+        data: {
+            columns: [
+                ['query1.count', 10, 20, 10, 0, 10, 22, 13, 22],
+                ['query2.count', 10, 0, 10, 22, 13, 21, 0, 33],
+                ['query3.count', 4, 0, 4, 33, 14, 21, 3, 11],
+                ['query4.count', 1, 5, 8, 10, 11, 33, 34, 7]
+            ],
+            type: 'spline'
+        }
+    });
+
+
+</script>
+
+{% end %}
+

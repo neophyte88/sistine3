@@ -1,0 +1,72 @@
+{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h3>Edit project {{project.name}}</h3>
+
+<div class="row">
+
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group">
+                <label for="name" class="control-label">Name</label>
+                <input type="text" id="name" value="{{project.name}}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="description" class="control-label">Name</label>
+                <input type="text" id="description" value="{{project.description}}" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="owner" class="control-label">Owner</label>
+                <input type="text" id="owner" value="{{project.owner}}" class="form-control">
+            </div>
+
+            <button class="btn btn-default" onclick="window.history.back()">Cancel</button>
+            <button class="btn btn-success" id="submit">Save</button>
+
+            <div class="alert alert-danger" hidden id="error-box"><span id="error-msg"></span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $("#submit").on('click', function () {
+        var name = $("#name").val();
+        var description = $("#description").val();
+        var owner = $("#owner").val();
+
+        var data = {
+            "project_id": "{{project.id}}"
+        };
+        if (name != "{{project.name}}") {
+            data.name = name;
+        }
+        if (description != "{{project.description}}") {
+            data.description = description;
+        }
+        if (owner != "{{project.owner}}") {
+            data.owner = owner;
+        }
+
+        pymicroserviceMethodCall({
+            "method": "update_project",
+            "params": data,
+            "onSuccess": function (data) {
+                if (data.error) {
+                    $("#error-msg").text(JSON.stringify(data.error));
+                    $("#error-box").show();
+                }
+                else {
+                    window.location.href = "/projects/view/{{project.id}}";
+                }
+            }
+        });
+    })
+</script>
+
+
+{% end %}
+

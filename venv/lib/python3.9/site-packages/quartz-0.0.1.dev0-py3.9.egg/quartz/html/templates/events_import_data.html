@@ -1,0 +1,148 @@
+projects.html{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h5>Import data</h5>
+
+
+<div class="row">
+    <div class="col s12">
+        <form>
+            <div class="input-field col s12">
+                <select name="category" id="category">
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }} (from project {{ category.project.name }})
+                    </option>
+                    {% end %}
+                </select>
+                <label for="category">Import data for category</label>
+            </div>
+
+            <div class="row">
+                <div class="input-field  col s12">
+                    <select name="file_type" id="file_type">
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV</option>
+                        <option value="xml">XML</option>
+                    </select>
+                    <label for="file_type">Data source type</label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="input-field file-field">
+                    <div class="btn">
+                        <span>File</span>
+                        <input type="file" class="form-control" id="file" name="file">
+                    </div>
+                    <div class="file-path-wrapper">
+                        <input class="file-path validate" type="text">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">Caution</span>
+                <p>When adding data from a file source, the generated events will have
+                    their timestamp equal to the moment when they are inserted into
+                    the database <br>
+                    Therefore, all the inserted events' timestamps will span a few seconds
+                    interval, making the generation of time series line charts messy.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<button class="btn green" onclick="triggerDataImport();">Add data now</button>
+<button class="btn red" onclick="window.history.back();">Cancel</button>
+
+<div id="loading-status" class="container">
+    <div class="col s12">
+        Loading file
+        <div class="progress">
+            <div id="progress-load-file" class="determinate" style="width: 0;"></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+        $('select').material_select();
+    });
+
+    function showError(msg) {
+        Materialize.toast(msg, 4000, "red");
+    }
+
+    function showSuccess(msg) {
+        Materialize.toast(msg, 4000, "green");
+    }
+
+    function updateProgressBar(progressBarId, loadPercent) {
+        console.log(progressBarId, loadPercent);
+        var item = $(progressBarId);
+        item.attr("style", "width: " + loadPercent + "%;")
+    }
+
+    function triggerDataImport() {
+        var categoryId = $("#category").val();
+        var dataSourceType = $("#file_type").val();
+        var reader = new FileReader();
+        var fileObject = document.getElementById("file").files[0];
+        if (fileObject === undefined) {
+            showError("Please choose a file");
+            return;
+        }
+        reader.onprogress = function (e) {
+            updateProgressBar("#progress-load-file", e.loaded / e.total * 100);
+            if (e.loaded == e.total) {
+                triggerRequestBuilding(categoryId, dataSourceType, reader)
+            }
+        };
+        reader.readAsText(fileObject);
+    }
+
+    function triggerRequestBuilding(categoryId, dataSourceType, reader) {
+        try {
+            var encodedContent = btoa(reader.result);
+        }
+        catch (err) {
+            showError("Invalid encoding for uploaded file");
+            return;
+        }
+
+        var params = {
+            category: categoryId,
+            source_type: dataSourceType,
+            content: encodedContent
+        };
+        pymicroserviceMethodCall({
+            "method": "import_event_data",
+            "params": params,
+            "onSuccess": handleApiCallResponse
+        })
+    }
+
+    function handleApiCallResponse(data) {
+        if (data.error != null) {
+            showError(JSON.stringify(data.error));
+            return
+        }
+
+        showSuccess("Inserted " + data.result.count + " events!");
+    }
+</script>
+
+
+{% end %}
+

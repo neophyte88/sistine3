@@ -1,0 +1,92 @@
+{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h5>Create category for project {{ project.name }}</h5>
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+
+                <div class="input-field">
+                    <input type="text" id="name">
+                    <label for="name">Name</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="description">
+                    <label for="description">Description</label>
+                </div>
+
+                <div class="input-field">
+                    <textarea id="fields" rows="15" style="font-family: Consolas, sans-serif"
+                              class="materialize-textarea">
+                        [{
+                            "name": "example",
+                            "description": "example",
+                            "type": "str",
+                            "required": true,
+                            "default": null
+                        }]
+                    </textarea>
+                    <label for="fields">Fields</label>
+                </div>
+
+                <button class="btn btn-default" onclick="window.history.back()">Cancel</button>
+                <button class="btn btn-success" id="create-category-btn">Create</button>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $("#create-category-btn").on('click', function () {
+        var name = $("#name").val();
+        var description = $("#description").val();
+        var fields = JSON.parse($("#fields").val());
+
+        if (name === "") {
+            $("#name").addClass("invalid");
+            Materialize.toast("Name required", 4000, "red");
+            return;
+        }
+        if (description === "") {
+            $("#description").addClass("invalid");
+            Materialize.toast("Description required", 4000, "red");
+            return;
+        }
+        if (fields == "") {
+            $("#fields").addClass("invalid");
+            Materialize.toast("Fields required", 4000, "red");
+            return;
+        }
+
+        var data = {
+            "project_id": "{{project.id}}",
+            "name": name,
+            "description": description,
+            "fields": fields
+        };
+
+
+        pymicroserviceMethodCall({
+            method: "create_category",
+            params: data,
+            onSuccess: function (data) {
+                if (data.error) {
+                    var msg = JSON.stringify(data.error);
+                    Materialize.toast(msg, 4000, "red");
+                }
+                else {
+                    window.location.href = "/projects/view/{{project.id}}/categories/" + data.result;
+                }
+            }
+        })
+    });
+
+</script>
+
+{% end %}
+

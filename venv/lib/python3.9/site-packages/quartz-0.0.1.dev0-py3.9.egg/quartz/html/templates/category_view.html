@@ -1,0 +1,132 @@
+{% extends "template.html" %}
+
+
+{% block "content" %}
+
+<h5>Category {{ event_category.name }}
+    <small>from project {{ project.name }}</small>
+</h5>
+
+
+<div class="row">
+    <div class="col s6">
+        <div class="card">
+            <div class="card-content">
+                <p><strong>Total events: </strong>{{ event_count }}</p>
+                <p><strong>Last event submitted: </strong>{{ last_submit_time }}</p>
+                <p><strong>Last event's source: </strong>{{ last_submit_source }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col s6">
+        <div class="card">
+            <div class="card-content">
+                <div class="collection">
+                    <a href="/events?query=select%20%22{{ event_category.name }}%22%20where%20__timestamp__%20%3E%3D%201h"
+                       class="collection-item">
+                        View from last hour
+                    </a>
+                    <a href="/events?query=select%20%22{{ event_category.name }}%22%20where%20__timestamp__%20%3E%3D%2024h"
+                       class="collection-item">
+                        View from last 24h
+                    </a>
+                    <a href="/events?query=select%20%22{{ event_category.name }}%22%20where%20__timestamp__%20%3E%3D%2072h"
+                       class="collection-item">
+                        View from last three days
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<ul class="collapsible" data-collapsible="accordion">
+
+    <li>
+        <div class="collapsible-header">Submitting events via raw requests</div>
+        <div class="collapsible-body">
+            <div class="card-panel">
+                Make a HTTP POST request to <code>/api</code> with the following body:
+            <pre id="html_code_snippet">
+            </pre>
+            </div>
+        </div>
+    </li>
+    <li>
+        <div class="collapsible-header">Submitting events from Python</div>
+        <div class="collapsible-body">
+            <div class="card-panel">
+                For this you will need the <code>quartz-client</code> library
+            <pre>
+from quartz_client import Event
+
+event = Event(category="{{ event_category.id }}", url="http://host:port/api")
+{% for fieldspec in event_category.fields %}event.{{ fieldspec.name }} = "{{ fieldspec.type }} value"
+{% end %}
+
+event.submit()
+            </pre>
+            </div>
+        </div>
+    </li>
+
+</ul>
+
+<div class="col-sm-12 col-xs-12">
+    <h3><a href="#" onclick="$('#usage-info').toggle();"></a></h3>
+    <div class="section" hidden id="usage-info">
+        <div class="section-body">
+            <div role="tabpanel">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="active"><a href="#raw_http" aria-controls="home" role="tab"
+                                                              data-toggle="tab" aria-expanded="true">Raw HTTP
+                        requests</a>
+                    </li>
+                    <li role="presentation"><a href="#python" aria-controls="home" role="tab"
+                                               data-toggle="tab" aria-expanded="true">Using Python</a>
+                    </li>
+
+                </ul>
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane active" id="raw_http">
+                        <p>
+                            Make raw HTTP <code>POST</code> requests to <code>/api</code> with the body:
+                        </p>
+
+
+                    </div>
+                    <div role="tabpanel" class="tab-pane" id="python">
+                        <p>You will need the <code>eventer-client</code> library.</p>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        $(document).ready(function () {
+            var htmlSnippet = {
+                "jsonrpc": "2.0",
+                "method": "submit_event",
+                "params": {
+                    "source": "Your name",
+                    "category": "{{ event_category.id }}",
+                    "values": {}
+                }
+            };
+            {% for fieldspec in event_category.fields %}
+            htmlSnippet["params"]["values"]["{{fieldspec.name}}"] = "{{fieldspec.type}} value";
+            {% end %}
+
+            $("#html_code_snippet").html(JSON.stringify(htmlSnippet, null, 4));
+        })
+    </script>
+    {% end %}
+

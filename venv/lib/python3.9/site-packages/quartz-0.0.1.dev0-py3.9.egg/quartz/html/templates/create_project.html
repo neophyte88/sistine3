@@ -1,0 +1,81 @@
+{% extends "template.html" %}
+
+{% block "content" %}
+<h4>Create project</h4>
+
+<div class="row">
+    <div class="col s12" style="margin-top: 2%">
+        <div class="card">
+            <div class="card-content">
+                <form>
+                    <div class="section-body">
+                        <!--Project name-->
+                        <div class="input-field">
+                            <input type="text" placeholder="" id="name">
+                            <label for="name">Project name</label>
+                        </div>
+
+                        <!--Project description-->
+                        <div class="input-field">
+                            <input type="text" placeholder="" id="description">
+                            <label for="description">Project description</label>
+                        </div>
+
+                        <!--Project owner-->
+                        <div class="input-field">
+                            <input type="text" placeholder="" id="owner">
+                            <label for="owner">Owner</label>
+                        </div>
+
+                    </div>
+
+                    <div class="row">
+                                <span class="btn green" id="submit">Submit
+                                </span>
+                                <span onclick="window.history.back();" class="btn red">
+                                    Cancel
+                                </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        var submitProject = function () {
+            var name = $("#name").val();
+            var description = $("#description").val();
+            var owner = $("#owner").val();
+
+
+            pymicroserviceMethodCall({
+                "method": "create_project",
+                "params": {
+                    "name": name,
+                    "description": description,
+                    "owner": owner
+                },
+                "onSuccess": function (data) {
+                    console.log(data);
+                    if (data.error !== null) {
+                        var message = "Error occured (" + data.error.data.class + "): " + data.error.data.info;
+                        Materialize.toast(message, 4000, "red lighten-1");
+                    }
+                    else {
+                        window.location.href = "/projects/view/" + data.result;
+                    }
+                }
+            })
+        };
+        $("#submit").on('click', function (event) {
+            event.preventDefault();
+            submitProject();
+        })
+    });
+
+</script>
+
+{% end %}
+
